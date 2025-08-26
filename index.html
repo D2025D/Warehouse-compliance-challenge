@@ -161,5 +161,74 @@
     if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', wire); } else { wire(); }
   })();
   </script>
+  <!-- HOTFIX: build the Levels sidebar if it's empty -->
+<script>
+(function(){
+  const levelsEl = document.getElementById('levels');
+  if(!levelsEl) return;
+
+  // Use your existing LEVELS if present; otherwise a tiny fallback
+  const DATA = (window.LEVELS && Array.isArray(window.LEVELS) && window.LEVELS.length) ? window.LEVELS : [
+    { title:"HSE & PPE", items:[{ q:"How often must a corporate H&S audit be conducted?",
+      options:["Every 6 months","Every 12 months","Every 18 months","Only after incidents"], correct:1, cat:"HSE 1.1" } ] },
+    { title:"Process & Audits", items:[{ q:"How frequently must core process audits be scheduled?",
+      options:["Monthly","Quarterly","Annually","Only after deviations"], correct:0, cat:"PO 5.3" } ] }
+  ];
+
+  function ensureVisible(){
+    const aside = levelsEl.closest('aside') || levelsEl;
+    aside.style.display = 'flex';
+    aside.style.minWidth = '280px';
+  }
+
+  function buildLevels(){
+    levelsEl.innerHTML = "";
+    DATA.forEach((lv,i)=>{
+      const d = document.createElement('div');
+      d.className = 'level';
+      d.innerHTML = `
+        <div style="width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.04);
+                    display:flex;align-items:center;justify-content:center;font-weight:800;
+                    border:1px solid rgba(255,255,255,.08)">${i+1}</div>
+        <div><div class="title">${lv.title}</div><div class="meta">${lv.items.length} questions</div></div>
+        <div style="margin-left:auto" class="badge">Level</div>`;
+      d.addEventListener('click', ()=>{
+        // If your app already has renderQuestion/state, use them
+        if (typeof window.renderQuestion === 'function') {
+          window.state = window.state || {levelIndex: 0, qIndex: 0};
+          window.state.levelIndex = i;
+          window.state.qIndex = 0;
+          window.renderQuestion();
+        } else {
+          // Fallback: render the first question of that level
+          const first = lv.items[0];
+          const qText = document.getElementById('qText');
+          const foot = document.getElementById('footCat');
+          const opts = document.getElementById('options');
+          if(qText) qText.textContent = first.q;
+          if(foot) foot.textContent = first.cat || "";
+          if(opts){
+            opts.innerHTML = "";
+            first.options.forEach((op,idx)=>{
+              const b = document.createElement('button');
+              b.className = 'opt';
+              b.textContent = (idx+1)+'. '+op;
+              opts.appendChild(b);
+            });
+          }
+        }
+      });
+      levelsEl.appendChild(d);
+    });
+  }
+
+  // Only build if nothing is showing
+  if (levelsEl.children.length === 0) {
+    ensureVisible();
+    buildLevels();
+  }
+})();
+</script>
+
 </body>
 </html>
