@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Warehouse Compliance Challenge (v6.2)</title>
+  <title>Warehouse Compliance Challenge (v6.5)</title>
   <style>
     :root{ --bg:#0b1220; --card:#121a2a; --accent:#3fb6ff; --accent-2:#6ee7ff; --text:#e8f1ff; --muted:#9ab0d1; --success:#22c55e; --danger:#ef4444; }
     *{box-sizing:border-box}
@@ -15,10 +15,10 @@
     .controls button.secondary{ background:transparent;color:var(--text);border:1px solid rgba(255,255,255,.18) }
     .controls button:disabled{ opacity:.5;cursor:not-allowed }
     main{ display:grid;grid-template-columns:340px 1fr;min-height:520px }
-    aside{ border-right:1px solid rgba(255,255,255,.08);padding:18px;display:flex;flex-direction:column;gap:12px }
+    aside{ border-right:1px solid rgba(255,255,255,.08);padding:18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg, rgba(63,182,255,.08), transparent 30%); }
     .level{ background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:12px;display:flex;gap:12px;align-items:center;cursor:pointer }
     .level.active{ outline:2px solid var(--accent) }
-    .content{ padding:22px }
+    .content{ padding:22px 22px 76px 22px }
     .question-card{ background:rgba(8,12,22,.8);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:18px }
     .q-text{ font-size:20px;margin:8px 0 10px }
     .options{ display:grid;gap:12px }
@@ -43,6 +43,8 @@
     .lb-panel{ position:fixed;left:0;right:0;bottom:-60vh;height:60vh;background:#0c1424;border-top:1px solid rgba(255,255,255,.2);transition:bottom .25s;z-index:8;overflow:auto }
     .lb-panel.show{ bottom:0 }
     table{ width:100%;border-collapse:collapse } th,td{ padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left;font-size:13px }
+    .debug{ position:fixed;right:8px;bottom:64px;font-size:11px;color:#9ab0d1 }
+    .debug a{ color:#6ee7ff }
   </style>
 </head>
 <body>
@@ -56,9 +58,9 @@
         </div>
       </div>
       <div class="controls">
-        <button id="btnStart">Start</button>
-        <button class="secondary" id="btnReset">Reset</button>
-        <button class="secondary" id="btnHelp">Instructions</button>
+        <button id="btnStart" type="button">Start</button>
+        <button class="secondary" id="btnReset" type="button">Reset</button>
+        <button class="secondary" id="btnHelp" type="button">Instructions</button>
       </div>
     </header>
     <main>
@@ -78,8 +80,8 @@
     <div class="lb-bar">
       <div class="small">Leaderboard is locked • grouped by site</div>
       <div>
-        <button class="lb-btn" id="btnShowLB">View Leaderboard</button>
-        <button class="lb-btn" id="btnExportLB">Export Leaderboard CSV</button>
+        <button class="lb-btn" id="btnShowLB" type="button">View Leaderboard</button>
+        <button class="lb-btn" id="btnExportLB" type="button">Export Leaderboard CSV</button>
       </div>
     </div>
     <div class="lb-panel" id="lbPanel">
@@ -87,16 +89,17 @@
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px">
           <div style="font-weight:800">Leaderboard</div>
           <div class="small" id="lbSummary"></div>
-          <button class="lb-btn" style="margin-left:auto" id="btnClearLB">Clear Leaderboard</button>
-          <button class="lb-btn" id="btnHideLB">Close</button>
+          <button class="lb-btn" style="margin-left:auto" id="btnClearLB" type="button">Clear Leaderboard</button>
+          <button class="lb-btn" id="btnHideLB" type="button">Close</button>
         </div>
         <div id="lbContainer"></div>
       </div>
     </div>
   </div>
 
-  <div class="modal show" id="playerModal" role="dialog" aria-modal="true">
-    <div class="card" style="max-width:720px">
+  <!-- Player Info Modal (REQUIRED) -->
+  <div class="modal" id="playerModal" role="dialog" aria-modal="true">
+    <form class="card" id="playerForm" novalidate>
       <h2>👋 Before we start</h2>
       <div class="small">Enter your details so they appear on the final results and leaderboard.</div>
       <div class="form-row">
@@ -110,35 +113,53 @@
         </div>
       </div>
       <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
-        <button class="controls button secondary" id="btnCancelInfo">Cancel</button>
-        <button id="btnBegin" disabled>Begin</button>
+        <button type="button" class="secondary" id="btnCancelInfo">Cancel</button>
+        <button id="btnBegin" type="submit">Begin</button>
       </div>
-    </div>
+    </form>
   </div>
 
-  <div class="modal" id="finalModal">
-    <div class="card">
-      <h2>✅ Final Summary</h2>
-      <div class="small" id="sumHeader"></div>
-      <div class="grid">
-        <div><div class="small">Total Score</div><div id="sumScore" style="font-size:24px;font-weight:800"></div></div>
-        <div><div class="small">Correct / Wrong</div><div id="sumCW" style="font-size:24px;font-weight:800"></div></div>
-        <div><div class="small">Longest Streak</div><div id="sumStreak" style="font-size:24px;font-weight:800"></div></div>
-      </div>
-      <div class="small" style="margin-top:4px">Per-level stats</div>
-      <div class="list" id="sumLevels"></div>
-      <div class="small" style="margin-top:8px">Review</div>
-      <div class="list" id="sumList"></div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:10px">
-        <button class="secondary" id="btnExport">Export CSV</button>
-        <button id="btnRestart">Restart</button>
-      </div>
-    </div>
-  </div>
+  <div class="debug" id="dbg"></div>
 
   <script>
-    // same logic as earlier message (trimmed here for brevity), but includes robust Begin validation and all features
-    // For space, not repeating entire dataset/logic again in this snippet
+  (function(){
+    const dbg = document.getElementById('dbg');
+    function log(msg){ console.log('[WCC]', msg); if(dbg){ dbg.innerHTML = '✓ ' + msg + ' • <a href=\"#\" id=\"openAlt\">Open modal</a>'; setTimeout(()=>{ const a=document.getElementById('openAlt'); if(a) a.onclick=(e)=>{ e.preventDefault(); openModal(); }; },0); }}
+    function $(id){ return document.getElementById(id); }
+    let playerModal, playerForm, inpName, inpSite;
+
+    function openModal(){ try{ playerModal.classList.add('show'); }catch(e){ const m=document.querySelector('.modal'); if(m){ m.style.display='flex'; } } if(inpName) inpName.focus(); }
+    function closeModal(){ if(playerModal) playerModal.classList.remove('show'); else { const m=document.querySelector('.modal'); if(m) m.style.display='none'; } }
+
+    function startGame(){
+      closeModal();
+      const q = $('qText'); if(q) q.textContent = 'Ready! Choose a level on the left to start.';
+    }
+
+    function wire(){
+      playerModal = $('playerModal'); playerForm = $('playerForm');
+      inpName = $('inpName'); inpSite = $('inpSite');
+
+      const btnStart = $('btnStart'); if(btnStart){ btnStart.addEventListener('click', openModal); }
+      $('btnCancelInfo')?.addEventListener('click', closeModal);
+
+      if(playerForm){
+        playerForm.addEventListener('submit', (e)=>{
+          e.preventDefault();
+          if(!playerForm.checkValidity()){ playerForm.reportValidity(); return; }
+          startGame();
+        });
+      }
+
+      if(location.hash.includes('force') || location.search.includes('force')) openModal();
+      window.addEventListener('keydown', (e)=>{ if(e.key.toLowerCase()==='s') openModal(); });
+
+      log('Script wired');
+    }
+
+    window.onerror = function(message, source, lineno){ alert('Script error: ' + message + '\\n(Line ' + lineno + ')'); };
+    if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', wire); } else { wire(); }
+  })();
   </script>
 </body>
 </html>
